@@ -40,7 +40,8 @@ public class OrderProducer {
 
 		Producer<String, Order> producer = new KafkaProducer<String, Order>(props);
 		List<Order> orders = readOrder();
-		orders.forEach((Order order) -> producer.send(new ProducerRecord<String, Order>("orders", order.getUserName(), order)));
+		//orders.forEach((Order order) -> producer.send(new ProducerRecord<String, Order>("orders", order.getUserName(), order)));
+		orders.forEach((Order order) -> producer.send(new ProducerRecord<String, Order>("orders", order.getItemName(), order)));
 		producer.close();
 	}
 	
