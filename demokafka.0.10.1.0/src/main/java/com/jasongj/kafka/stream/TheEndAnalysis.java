@@ -45,15 +45,21 @@ public class TheEndAnalysis {
                 .map((String userName, OrderUser orderUser) -> new KeyValue<String, OrderUser>(orderUser.itemName, orderUser))
                 .through(Serdes.String(), SerdesFactory.serdFrom(OrderUser.class), (String key, OrderUser orderUser, int numPartitions) -> (orderUser.getItemName().hashCode() & 0x7FFFFFFF) % numPartitions, "orderuser-repartition-by-item")
                 .leftJoin(itemTable, (OrderUser orderUser, Item item) -> OrderUserItem.fromOrderUser(orderUser, item), Serdes.String(), SerdesFactory.serdFrom(OrderUser.class))
-                .map( (String localGender, OrderUserItem orderUserItem) ->  KeyValue.pair(orderUserItem.getItemAddress() + "-" + orderUserItem.getGender(), OrderInfoCount.fromOrderUserItem(orderUserItem) ) );
+                .map( (String localGender, OrderUserItem orderUserItem) ->  KeyValue.pair(orderUserItem.getItemName(), OrderInfoCount.fromOrderUserItem(orderUserItem) ) );
 
-        KTable<String, OrderInfoCount> orderCount = userInfoKStream
+
+        //userInfoKStream.foreach( (String key, OrderInfoCount value) -> System.out.printf("key=%s, value=%s -- %s\n", key, value.getTotalSales(), value.getOrderUserItem().getItemName()) );
+
+        KTable<String, OrderInfoCount> itemSalesCount = userInfoKStream
                 .groupByKey(Serdes.String(), SerdesFactory.serdFrom(OrderInfoCount.class))
                 .reduce( (OrderInfoCount orderInfoCount, OrderInfoCount orderInfoCount2) ->  CalcOrderUserItem(orderInfoCount, orderInfoCount2), "local-gender-amount-store" );
 
-        itemTable.foreach( (String key, Item item) -> System.out.printf("key=%s, value=%s\n", key, item.getItemName()) );
+        itemSalesCount
+                .mapValues( (String itemName, OrderInfoCount orderInfoCount) -> KeyValue.pair( itemName, SalesOrder.fromOrderInfoCount() ) );
 
-        orderCount.foreach( ( String key, OrderInfoCount orderInfoCount ) -> System.out.printf("key=%s, value=%s -- %s \n", key, orderInfoCount.getTotalSales(), orderInfoCount.getOrderUserItem().getItemName()) );
+        itemSalesCount.foreach( (String key, OrderInfoCount value) -> System.out.printf("key=%s, value=%s -- %s\n", key, value.getTotalSales(), value.getOrderUserItem().getItemType()) );
+//
+//        orderCount.foreach( ( String key, OrderInfoCount orderInfoCount ) -> System.out.printf("key=%s, value=%s -- %s \n", key, orderInfoCount.getTotalSales(), orderInfoCount.getOrderUserItem().getItemName()) );
 
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamBuilder, props);
@@ -74,6 +80,16 @@ public class TheEndAnalysis {
             orderInfoCount.addItemCount(orderInfoCount2.getItemCount());
         }
         return orderInfoCount;
+    }
+
+    public static class SalesOrder {
+
+
+
+        public static void fromOrderInfoCount() {
+        }
+
+
     }
 
     public static class OrderInfoCount {
