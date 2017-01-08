@@ -54,12 +54,8 @@ public class TheEndAnalysis {
                 .groupByKey(Serdes.String(), SerdesFactory.serdFrom(OrderInfoCount.class))
                 .reduce( (OrderInfoCount orderInfoCount, OrderInfoCount orderInfoCount2) ->  CalcOrderUserItem(orderInfoCount, orderInfoCount2), "local-gender-amount-store" );
 
-        itemSalesCount
-                .mapValues( (String itemName, OrderInfoCount orderInfoCount) -> KeyValue.pair( itemName, SalesOrder.fromOrderInfoCount() ) );
 
         itemSalesCount.foreach( (String key, OrderInfoCount value) -> System.out.printf("key=%s, value=%s -- %s\n", key, value.getTotalSales(), value.getOrderUserItem().getItemType()) );
-//
-//        orderCount.foreach( ( String key, OrderInfoCount orderInfoCount ) -> System.out.printf("key=%s, value=%s -- %s \n", key, orderInfoCount.getTotalSales(), orderInfoCount.getOrderUserItem().getItemName()) );
 
 
         KafkaStreams kafkaStreams = new KafkaStreams(streamBuilder, props);
